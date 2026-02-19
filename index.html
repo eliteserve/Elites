@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Elite Serve | Recruitment Architecture</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+    <style>
+        /* --- 1. THEME CONFIGURATION --- */
+        :root {
+            --bg-dark: #121212;      
+            --brand-navy: #0A1F44;   
+            --brand-silver: #BFC5CC; 
+            --glass-nav: rgba(10, 31, 68, 0.85);
+            --card-bg: #1A1A1A;
+            --white: #ffffff;
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --admin-color: #ff4757; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Open Sans', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: var(--brand-silver); 
+            overflow-x: hidden; 
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Montserrat', sans-serif; color: var(--white); font-weight: 700; letter-spacing: -0.5px; }
+        
+        /* --- UTILITIES --- */
+        .hidden { display: none !important; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        /* Buttons */
+        .btn-silver { 
+            background: var(--brand-silver); color: var(--brand-navy); 
+            padding: 14px 32px; border: none; font-weight: 700; cursor: pointer; 
+            border-radius: 50px; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px;
+            transition: var(--transition); box-shadow: 0 4px 15px rgba(191, 197, 204, 0.2);
+            display: inline-block; text-decoration: none; text-align: center;
+        }
+        .btn-silver:hover { background: #fff; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(191, 197, 204, 0.4); }
+        .btn-outline { background: transparent; border: 2px solid var(--brand-silver); color: var(--brand-silver); }
+        .btn-outline:hover { background: var(--brand-silver); color: var(--bg-dark); }
+        
+        .btn-admin { background: var(--admin-color); color: white; border:none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; width: 100%; transition: 0.3s; }
+        .btn-admin:hover { background: #ff6b81; }
+
+        /* --- NAVIGATION --- */
+        .navbar {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(180deg, rgba(18,18,18,0.9) 0%, rgba(18,18,18,0) 100%);
+            transition: var(--transition);
+        }
+        .navbar.scrolled { background: rgba(18,18,18,0.95); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        
+        .logo { font-family: 'Montserrat'; font-weight: 800; font-size: 1.4rem; color: var(--brand-silver); letter-spacing: 1px; }
+        .nav-trigger { font-size: 1.6rem; color: var(--brand-silver); cursor: pointer; }
+
+        /* Fullscreen Menu */
+        .sidenav {
+            height: 100%; width: 100%; position: fixed; z-index: 3000; top: 0; left: 0;
+            background: var(--brand-navy); opacity: 0; pointer-events: none;
+            transition: var(--transition); display: flex; flex-direction: column; 
+            justify-content: center; align-items: center;
+        }
+        .sidenav.opened { opacity: 1; pointer-events: auto; }
+        .sidenav a {
+            padding: 15px; font-size: 1.5rem; color: var(--brand-silver); text-decoration: none;
+            font-family: 'Montserrat'; font-weight: 600; transition: 0.3s; transform: translateY(20px); opacity: 0;
+        }
+        .sidenav.opened a { transform: translateY(0); opacity: 1; }
+        .closebtn { position: absolute; top: 20px; right: 25px; font-size: 2.5rem !important; cursor: pointer; }
+
+        /* --- HERO SECTION --- */
+        .hero { 
+            min-height: 100vh; position: relative;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--brand-navy) 100%);
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            padding-top: 60px;
+        }
+        .hero::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1000&q=80') center/cover;
+            opacity: 0.15; mix-blend-mode: overlay;
+        }
+        .hero-content { position: relative; z-index: 2; max-width: 800px; padding: 0 20px; }
+        .hero h1 { font-size: clamp(2.5rem, 8vw, 4.5rem); margin-bottom: 15px; color: var(--white); text-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .hero p { font-size: clamp(1rem, 4vw, 1.2rem); margin-bottom: 40px; color: var(--brand-silver); letter-spacing: 1px; }
+        .btn-group { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+
+        /* --- SECTIONS --- */
+        .section-padding { padding: 80px 0; }
+        .section-title { text-align: center; margin-bottom: 50px; }
+        .section-title span { color: var(--brand-navy); background: var(--brand-silver); padding: 5px 15px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .section-title h2 { margin-top: 20px; font-size: 2rem; }
+
+        /* Grid System */
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        
+        .feature-card { 
+            background: var(--card-bg); padding: 40px 30px; border-radius: 16px; 
+            border: 1px solid rgba(191, 197, 204, 0.1); text-align: left; transition: var(--transition);
+        }
+        .feature-card:hover { transform: translateY(-10px); background: #222; border-color: var(--brand-silver); }
+        .feature-card i { font-size: 2.5rem; color: var(--brand-silver); margin-bottom: 25px; }
+        .feature-card h3 { font-size: 1.5rem; margin-bottom: 15px; color: var(--white); }
+        .feature-card p, .feature-card ul { font-size: 0.95rem; color: #aaa; margin-bottom: 20px; }
+        .feature-card ul { padding-left: 20px; }
+        .feature-card li { margin-bottom: 10px; }
+
+        /* --- ABOUT / MISSION --- */
+        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        .about-text { text-align: left; font-size: 1.1rem; color: #ccc; }
+        .about-text p { margin-bottom: 20px; }
+        .core-values { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 30px; }
+        .core-value-tag { background: #222; padding: 10px 20px; border-radius: 30px; border: 1px solid #444; color: var(--white); font-weight: 600; font-size: 0.9rem; }
+        
+        /* New About Visuals */
+        .about-visuals { position: relative; text-align: center; }
+        .owner-img-wrapper { 
+            position: relative; 
+            width: 80%; 
+            margin: 0 auto;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(191, 197, 204, 0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .owner-img { width: 100%; display: block; filter: grayscale(20%); transition: 0.5s; }
+        .owner-img-wrapper:hover .owner-img { filter: grayscale(0%); transform: scale(1.03); }
+        
+        .about-logo-badge {
+            position: absolute;
+            bottom: -30px;
+            right: 0;
+            width: 135px;
+            height: 145 px;
+            background: var(--bg-dark);
+            border: 2px solid var(--brand-silver);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            z-index: 5;
+        }
+        .about-logo-badge img { width: 95%; height: auto; border-radius: 50%;}
+
+        /* --- FAQ SECTION --- */
+        .faq-container { max-width: 800px; margin: 0 auto; }
+        .faq-item { background: var(--card-bg); margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; overflow: hidden; }
+        .faq-question { padding: 20px; width: 100%; text-align: left; background: none; border: none; color: var(--white); font-weight: 600; font-size: 1.1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .faq-question i { transition: transform 0.3s ease; }
+        .faq-question.active i { transform: rotate(180deg); }
+        .faq-answer { padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease; color: #aaa; background: #151515; }
+        .faq-answer p { padding-bottom: 20px; }
+
+        /* --- CONTACT SECTION --- */
+        .contact-container {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+            background: var(--card-bg); border-radius: 16px; padding: 40px;
+            border: 1px solid rgba(191, 197, 204, 0.1);
+        }
+        .contact-info h3 { font-size: 1.8rem; margin-bottom: 15px; color: white; }
+        .contact-info p { color: #888; margin-bottom: 30px; }
+        .contact-detail { display: flex; align-items: center; margin-bottom: 20px; color: var(--brand-silver); }
+        .contact-detail i { width: 40px; height: 40px; background: rgba(191, 197, 204, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; }
+        .contact-form .form-group { margin-bottom: 15px; }
+        .contact-form input, .contact-form textarea {
+            width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #333;
+            background: #252525; color: white; outline: none; font-family: inherit;
+        }
+        .contact-form input:focus, .contact-form textarea:focus { border-color: var(--brand-silver); }
+        .contact-form textarea { height: 120px; resize: none; }
+
+        /* --- DASHBOARD --- */
+        #dashboard-view { min-height: 100vh; padding: 100px 0 40px; background: var(--bg-dark); }
+        .db-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
+        .db-card { 
+            background: #1A1A1A; padding: 25px; border-radius: 12px; 
+            border-left: 4px solid var(--brand-silver); margin-bottom: 20px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .progress-container { background: #333; height: 6px; border-radius: 10px; margin: 15px 0 5px; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--brand-silver); width: 0%; transition: 1.5s ease-in-out; }
+
+        html { scroll-behavior: smooth; }
+        section { scroll-margin-top: 90px; }
+        
+        /* --- ADMIN SPECIFIC --- */
+        #admin-panel { border-left: 4px solid var(--admin-color); position: relative; }
+        .admin-badge { background: var(--admin-color); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-left: 10px; vertical-align: middle; }
+        .admin-section-title { color: var(--admin-color); font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        
+        /* --- AUTH MODAL --- */
+        .modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); z-index: 4000; backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .modal.active { opacity: 1; }
+        .auth-box { 
+            background: #1e1e1e; padding: 40px 30px; border-radius: 16px; width: 90%; max-width: 400px; 
+            text-align: center; position: relative; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .auth-input { 
+            width: 100%; padding: 15px; margin: 8px 0; border: 1px solid #333; 
+            border-radius: 8px; background: #2a2a2a; color: white; font-family: inherit; outline: none;
+        }
+        .auth-input:focus { border-color: var(--brand-silver); }
+        .auth-toggle { margin-top: 20px; font-size: 0.9rem; color: #888; cursor: pointer; text-decoration: underline; }
+
+        /* --- LOADING SPINNER --- */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark);
+            z-index: 9999; display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%; border-top-color: var(--brand-silver);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            .hero-content { padding-top: 40px; }
+            .section-padding { padding: 60px 0; }
+            .btn-group { flex-direction: column; width: 100%; }
+            .btn-silver, .btn-outline { width: 100%; text-align: center; }
+            .db-header { flex-direction: column; align-items: flex-start; }
+            .db-header button { width: 100%; }
+            .contact-container { grid-template-columns: 1fr; padding: 20px; }
+            
+            /* About Section Mobile */
+            .about-grid { grid-template-columns: 1fr; gap: 40px; }
+            .about-text { text-align: center; }
+            .core-values { justify-content: center; }
+            .about-logo-badge { width: 100px; height: 100px; bottom: -20px; right: 0; }
+        }
+        
+        #scroll-progress {
+            position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+            z-index: 5000; transition: width 0.1s linear;
+            background: linear-gradient(90deg, var(--brand-silver), #ffffff);  
+        } 
+        /* --- FOOTER STYLES --- */
+        #main-footer {
+            background-color: #050505;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 80px 0 30px;
+            margin-top: auto;
+            position: relative;
+            z-index: 10;
+        }
+        .footer-top {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+        .footer-logo { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.5rem; color: var(--brand-silver); margin-bottom: 20px; letter-spacing: 1px; }
+        .footer-desc { color: #888; font-size: 0.9rem; line-height: 1.7; margin-bottom: 25px; max-width: 300px; }
+        .social-links { display: flex; gap: 15px; }
+        .social-links a { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--brand-silver); text-decoration: none; transition: all 0.3s ease; }
+        .social-links a:hover { background: var(--brand-silver); color: var(--bg-dark); transform: translateY(-3px); }
+        .footer-col h4 { color: #fff; font-size: 1.1rem; margin-bottom: 25px; position: relative; display: inline-block; }
+        .footer-col h4::after { content: ''; position: absolute; left: 0; bottom: -8px; width: 30px; height: 2px; background: var(--brand-silver); }
+        .footer-nav, .contact-list { list-style: none; }
+        .footer-nav li { margin-bottom: 12px; }
+        .footer-nav a { color: #999; text-decoration: none; font-size: 0.95rem; transition: color 0.3s ease; }
+        .footer-nav a:hover { color: var(--brand-silver); padding-left: 5px; }
+        .contact-list li { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 15px; color: #999; font-size: 0.9rem; }
+        .contact-list i { color: var(--brand-silver); margin-top: 5px; }
+        .footer-bottom { border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+        .copyright, .legal-links a { color: #666; font-size: 0.85rem; text-decoration: none; transition: color 0.3s; }
+        .legal-links a:hover { color: var(--brand-silver); }
+        .separator { color: #444; margin: 0 10px; }
+        .back-to-top { background: #222; border: 1px solid rgba(255, 255, 255, 0.1); color: var(--brand-silver); width: 40px; height: 40px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; }
+        .back-to-top:hover { background: var(--brand-silver); color: var(--bg-dark); }
+        @media (max-width: 768px) {
+            .footer-top { grid-template-columns: 1fr; gap: 30px; }
+            .footer-bottom { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div id="scroll-progress"></div>
+    <div id="loader"><div class="spinner"></div></div>
+
+    <nav class="navbar" id="navbar">
+        <div class="logo">ELITE SERVE</div>
+        <div class="nav-trigger" onclick="openNav()"><i class="fas fa-bars"></i></div>
+    </nav>
+
+    <div id="mySidenav" class="sidenav">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <a onclick="showAuth('login')">Client Dashboard</a>
+        <a href="#about" onclick="closeNav(true)">About Us</a>
+        <a href="#services" onclick="closeNav(true)">Services</a>
+        <a href="#faq" onclick="closeNav(true)">FAQs</a>
+        <a href="#contact" onclick="closeNav(true)">Contact</a>
+        <div style="margin-top: 40px; width: 80%; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; display: flex; flex-direction: column; align-items: center;">
+            <a onclick="showAuth('login')" style="font-size: 1rem;"><i class="fas fa-sign-in-alt"></i> Login</a>
+            <a onclick="showAuth('signup')" style="font-size: 1rem; color: var(--brand-silver); border: 1px solid var(--brand-silver); border-radius: 30px; padding: 10px 30px;">Partner With Us</a>
+        </div>
+    </div>
+
+    <div id="public-view">
+        
+        <header class="hero">
+            <div class="hero-content">
+                <h1 class="reveal">BUILD YOUR LEGACY</h1>
+                <p class="reveal">Architecting Careers. Constructing Futures. <br>The premium standard in recruitment.</p>
+                <div class="btn-group reveal">
+                    <a href="#services" class="btn-silver">Explore Services</a>
+                    <button class="btn-silver btn-outline" onclick="showAuth('login')">Client Login</button>
+                </div>
+            </div>
+        </header>
+
+        <section id="about" class="section-padding container">
+            <div class="section-title reveal">
+                <span>Who We Are</span>
+                <h2>Our Mission</h2>
+            </div>
+            
+            <div class="about-grid reveal">
+                <div class="about-text">
+                    <p>We are a people-first service platform built to simplify hiring and connect individuals with reliable service providers. Our mission is simple — <strong>bridge the gap between opportunity and reliability.</strong></p>
+                    <p>Whether you're scaling your team or searching for trusted services, we ensure you connect with the right people — the right way. We deliver value, not just contacts.</p>
+                    
+                    <div class="core-values">
+                        <div class="core-value-tag"><i class="fas fa-check-circle" style="color: var(--brand-silver);"></i> Quality over quantity</div>
+                        <div class="core-value-tag"><i class="fas fa-handshake" style="color: var(--brand-silver);"></i> Long-term partnerships</div>
+                        <div class="core-value-tag"><i class="fas fa-balance-scale" style="color: var(--brand-silver);"></i> Ethical & transparent</div>
+                    </div>
+                </div>
+
+                <div class="about-visuals">
+                    <div class="owner-img-wrapper">
+                        <img src="team.jpg" alt="Owner" class="owner-img">
+                    </div>
+                    <div class="about-logo-badge">
+                        <img src="logo.png" alt="Elite Serve Logo">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" class="section-padding" style="background: #0f0f0f;">
+            <div class="container">
+                <div class="section-title reveal">
+                    <span>What We Do</span>
+                    <h2>Our Solutions</h2>
+                </div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card reveal">
+                        <i class="fas fa-building"></i>
+                        <h3>For Businesses</h3>
+                        <p>We provide structured hiring solutions by sourcing and shortlisting quality candidates who align with your company’s goals and culture. We understand that the right hire can transform a business, focusing on efficiency, transparency, and long-term value.</p>
+                        <ul>
+                            <li>Pre-screened candidates for sales, marketing, operations, security, and more.</li>
+                            <li>End-to-end recruitment: sourcing, screening, interviews, and onboarding.</li>
+                            <li>Rapid closure within 7–21 working days.</li>
+                        </ul>
+                        <button class="btn-silver" style="margin-top: 15px; width: 100%;" onclick="showAuth('signup')">Hire Now</button>
+                    </div>
+
+                    <div class="feature-card reveal">
+                        <i class="fas fa-users"></i>
+                        <h3>For Individuals</h3>
+                        <p>Looking for dependable services? We act as a trusted connector. Instead of wasting time searching and verifying providers, we guide you toward the most reliable companies based on credibility and service standards.</p>
+                        <ul>
+                            <li>Security and Housekeeping services.</li>
+                            <li>Facility management and Manpower solutions.</li>
+                            <li>Verified local service providers.</li>
+                        </ul>
+                        <a href="#contact" class="btn-silver btn-outline" style="margin-top: 15px; width: 100%; text-align: center; display: block;">Find Trusted Services</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="section-padding container">
+            <div class="section-title reveal">
+                <span>Knowledge Base</span>
+                <h2>Frequently Asked Questions</h2>
+            </div>
+            
+            <div class="faq-container reveal">
+                <div class="faq-item">
+                    <button class="faq-question">What hiring services do you provide? <i class="fas fa-chevron-down"></i></button>
+                    <div class="faq-answer">
+                        <p>We help businesses hire reliable, pre-screened candidates for roles in sales, marketing, operations, security staff, field executives, and more.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">How does your recruitment process work? <i class="fas fa-chevron-down"></i></button>
+                    <div class="faq-answer">
+                        <p>Our process includes: Understanding your requirement, Sourcing & screening candidates, Shortlisting quality profiles, Interview coordination, and Offer/onboarding support. We focus on quality, not resume dumping.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">Do you provide replacement if the candidate leaves? <i class="fas fa-chevron-down"></i></button>
+                    <div class="faq-answer">
+                        <p>Yes, we offer a limited replacement period (terms apply) for hiring stability.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">How do you ensure service companies are reliable? <i class="fas fa-chevron-down"></i></button>
+                    <div class="faq-answer">
+                        <p>We recommend companies based on background checks, service history, professionalism, and reliability. We prioritize safety and credibility.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">Are you directly providing B2C services (like housekeeping)? <i class="fas fa-chevron-down"></i></button>
+                    <div class="faq-answer">
+                        <p>No. We act as a trusted bridge connecting you with the most reliable companies suited to your needs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="section-padding" style="background: #0f0f0f;">
+            <div class="container">
+                <div class="section-title reveal">
+                    <span>Connect With Us</span>
+                    <h2>Start The Conversation</h2>
+                </div>
+
+                <div class="contact-container reveal">
+                    <div class="contact-info">
+                        <h3>Ready to Elevate?</h3>
+                        <p>Join the industry leaders who trust Elite Serve for their most critical staffing requirements. Reach out today.</p>
+                        
+                        <div class="contact-detail">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <div>
+                                <strong>Headquarters</strong><br>
+                                Gujarat, India
+                            </div>
+                        </div>
+                        <div class="contact-detail">
+                            <i class="fas fa-envelope"></i>
+                            <div>
+                                <strong>Email Support</strong><br>
+                                elitesserve@gmail.com
+                            </div>
+                        </div>
+                        <div class="contact-detail">
+                            <i class="fas fa-phone-alt"></i>
+                            <div>
+                                <strong>Call Us</strong><br>
+                                +91 74285 45725
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-form">
+                        <form id="contact-form">
+                            <div class="form-group">
+                                <input type="text" name="from_name" placeholder="Your Name" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="email" name="from_email" placeholder="Email Address" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" name="subject" placeholder="Subject / Requirement" required>
+                            </div>
+                            <div class="form-group">
+                                <textarea name="message" placeholder="How can we help you?" required></textarea>
+                            </div>
+                            <button type="submit" class="btn-silver" id="send-btn" style="width: 100%;">Send Message</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer id="main-footer">
+            <div class="container">
+                <div class="footer-top">
+                    <div class="footer-col">
+                        <div class="footer-logo">ELITE SERVE</div>
+                        <p class="footer-desc">
+                            Bridging the gap between opportunity and reliability. We define the premium standard in recruitment and verified service connections.
+                        </p>
+                        <div class="social-links">
+                            <a href="https://www.linkedin.com/in/payal-awasthi-b97660288?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app " aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="https://x.com/ElitesServe" aria-label="Twitter"><i class="fab fa-x"></i></a>
+                            <a href="https://www.instagram.com/eliteserve2026?igsh=MWNtdzBubGZpcWluZg==" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4>Company</h4>
+                        <ul class="footer-nav">
+                            <li><a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Home</a></li>
+                            <li><a href="#services">Services</a></li>
+                            <li><a href="#contact">Contact Us</a></li>
+                            <li><a onclick="showAuth('login')" style="cursor: pointer;">Client Portal</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4>Solutions</h4>
+                        <ul class="footer-nav">
+                            <li><a href="#">Corporate Hiring</a></li>
+                            <li><a href="#">Manpower Solutions</a></li>
+                            <li><a href="#">Facility Management</a></li>
+                            <li><a href="#">Security Services</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4>Headquarters</h4>
+                        <ul class="contact-list">
+                            <li>
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>Gujarat, India</span>
+                            </li>
+                            <li>
+                                <i class="fas fa-envelope"></i>
+                                <span>elitesserve@gmail.com</span>
+                            </li>
+                            <li>
+                                <i class="fas fa-phone-alt"></i>
+                                <span>+91 74285 45725</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="footer-bottom">
+                    <div class="copyright">
+                        &copy; 2026 Elite Serve. All rights reserved. </br>MSME registered
+                    </div>
+                    <div class="legal-links">
+                        <a href="#">Privacy Policy</a>
+                        <span class="separator">|</span>
+                        <a href="#">Terms of Service</a>
+                    </div>
+                    <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <div id="dashboard-view" class="hidden">
+        <div class="container">
+            <div class="db-header">
+                <div>
+                    <h2>Client Command Center <span id="admin-indicator" class="admin-badge hidden">ADMIN</span></h2>
+                    <p style="color: #666;">Authenticated as <span id="user-name" style="color: var(--brand-silver); font-weight: 700;">Client</span></p>
+                </div>
+                <button onclick="logout()" class="btn-silver btn-outline" style="font-size: 0.7rem;">Sign Out</button>
+            </div>
+
+            <div id="admin-panel" class="db-card hidden">
+                <div class="admin-section-title">ADMINISTRATOR CONTROL PANEL</div>
+                <div style="background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="font-size: 0.8rem; color: #888;">Step 1: Find Client</label>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <input type="email" id="target-email" class="auth-input" placeholder="Enter client email address..." style="margin:0;">
+                        <button onclick="findUser()" class="btn-silver" style="padding: 0 20px; font-size: 1.2rem;"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <div id="admin-editor" class="hidden" style="background: #222; padding: 15px; border-radius: 8px; border: 1px solid var(--admin-color);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <label style="font-size: 0.8rem; color: var(--admin-color);">Editing: <span id="editing-email" style="color:white; font-weight:bold;"></span></label>
+                        <span style="font-size:0.8rem; color:#666; cursor:pointer;" onclick="closeAdminEditor()">[Cancel]</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 0.7rem; color: #888;">Sourcing %</label>
+                            <input type="number" id="edit-res" class="auth-input" min="0" max="100">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.7rem; color: #888;">Interview %</label>
+                            <input type="number" id="edit-li" class="auth-input" min="0" max="100">
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 0.7rem; color: #888;">Live Status Update</label>
+                        <textarea id="edit-focus" class="auth-input" rows="2"></textarea>
+                    </div>
+                    <button class="btn-admin" onclick="updateTargetUser()" style="margin-top: 15px;">Update Client Data</button>
+                </div>
+            </div>
+
+            <div class="db-card">
+                <h4 style="color: var(--brand-silver); margin-bottom: 15px;"><i class="fas fa-id-badge"></i> Your Profile</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 0.9rem; color: #ccc;">
+                    <div><strong style="color: #666;">Email:</strong> <br><span id="dash-email">...</span></div>
+                    <div><strong style="color: #666;">Phone:</strong> <br><span id="dash-phone">...</span></div>
+                    <div><strong style="color: #666;">Industry:</strong> <br><span id="dash-occ">...</span></div>
+                    <div><strong style="color: #666;">Requirement:</strong> <br><span id="dash-sal">...</span></div>
+                </div>
+            </div>
+
+            <div class="stat-grid">
+                <div class="db-card">
+                    <h3 style="color: var(--white);"><i class="fas fa-chart-pie"></i> Your Pipeline</h3>
+                    <div style="margin-top: 25px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#888;">
+                            <span>Sourcing Phase</span>
+                            <span id="res-val">0%</span>
+                        </div>
+                        <div class="progress-container"><div id="res-prog" class="progress-bar"></div></div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#888;">
+                            <span>Interview Phase</span>
+                            <span id="li-val">0%</span>
+                        </div>
+                        <div class="progress-container"><div id="li-prog" class="progress-bar"></div></div>
+                    </div>
+                </div>
+
+                <div class="db-card">
+                    <h3 style="color: var(--white);"><i class="fas fa-clipboard-list"></i> Live Status</h3>
+                    <p id="focus-text" style="margin-top: 15px; line-height: 1.6; color: var(--brand-silver); font-style: italic;">
+                        Connecting to server...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="authModal" class="modal">
+        <div class="auth-box">
+            <span class="close-modal" onclick="closeModal()" style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: #fff; cursor: pointer;">&times;</span>
+            <h3 id="authTitle" style="margin-bottom: 20px; color: var(--brand-silver);">Client Login</h3>
+            <div id="regFields" class="hidden">
+                <input type="text" id="regName" class="auth-input" placeholder="Company / Individual Name">
+                <input type="tel" id="regPhone" class="auth-input" placeholder="Phone Number">
+                <input type="text" id="regOcc" class="auth-input" placeholder="Industry">
+                <input type="text" id="regSal" class="auth-input" placeholder="Hiring Requirement">
+            </div>
+            <input type="email" id="email" class="auth-input" placeholder="Email Address">
+            <input type="password" id="pass" class="auth-input" placeholder="Password">
+            <button class="btn-silver" style="width: 100%; margin-top: 20px;" onclick="handleAuth()" id="authBtn">Secure Login</button>
+            <p id="toggleText" class="auth-toggle" onclick="toggleAuthMode()">New here? Create an account</p>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- EMAILJS CONFIGURATION ---
+        (function() {
+            emailjs.init("QSClqJHzILX3F0E1u");
+        })();
+
+        window.onload = function() {
+            document.getElementById('contact-form').addEventListener('submit', function(event) {
+                event.preventDefault(); 
+                const btn = document.getElementById('send-btn');
+                const oldText = btn.innerText;
+                btn.innerText = "Sending...";
+                btn.disabled = true;
+
+                emailjs.sendForm('service_6jr3hzd', 'template_xkp6beg', this)
+                    .then(function() {
+                        alert('Message sent successfully! We will contact you soon.');
+                        document.getElementById('contact-form').reset();
+                    }, function(error) {
+                        alert('Failed to send message: ' + JSON.stringify(error));
+                    })
+                    .finally(function() {
+                        btn.innerText = oldText;
+                        btn.disabled = false;
+                    });
+            });
+        }
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCaTi4EzdMiWEVA6yLG1dSNLWBnEWHm3Ow",
+            authDomain: "eliteserveportal.firebaseapp.com",
+            projectId: "eliteserveportal",
+            storageBucket: "eliteserveportal.firebasestorage.app",
+            messagingSenderId: "523778273155",
+            appId: "1:523778273155:web:558457cc6ce68200e4d0b6"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- STATE & HISTORY MANAGEMENT ---
+        let currentUID = null;
+        let isLoginMode = true;
+        let targetUserId = null; 
+        
+        function pushHistoryState(stateName) { history.pushState({ uiState: stateName }, "", "#" + stateName); }
+
+        window.onpopstate = function(event) {
+            const modal = document.getElementById("authModal");
+            if (modal.style.display === "flex") { closeModal(true); return; }
+            const sidenav = document.getElementById("mySidenav");
+            if (sidenav.classList.contains("opened")) { closeNav(true); return; }
+            const dash = document.getElementById("dashboard-view");
+            if (!dash.classList.contains("hidden")) {
+                document.getElementById("dashboard-view").classList.add('hidden');
+                document.getElementById("public-view").classList.remove('hidden');
+                document.getElementById("navbar").classList.remove('hidden');
+                return;
+            }
+        };
+
+        // --- UI ACTIONS ---
+        function openNav() { pushHistoryState("menu"); document.getElementById("mySidenav").classList.add('opened'); }
+        function closeNav(isBackPress = false) { 
+            document.getElementById("mySidenav").classList.remove('opened');
+            if(!isBackPress && history.state && history.state.uiState === 'menu') { history.back(); }
+        }
+
+        function showAuth(mode) {
+            pushHistoryState("auth");
+            const modal = document.getElementById("authModal");
+            modal.style.display = "flex";
+            setTimeout(() => { modal.classList.add("active"); }, 10);
+            isLoginMode = (mode === 'login');
+            updateAuthUI();
+            closeNav(true); 
+        }
+
+        function closeModal(isBackPress = false) {
+            const modal = document.getElementById("authModal");
+            modal.classList.remove("active");
+            setTimeout(() => { 
+                modal.style.display = "none"; 
+                if(!isBackPress && history.state && history.state.uiState === 'auth') { history.back(); }
+            }, 300);
+        }
+
+        function switchToDashboard() {
+            document.getElementById("public-view").classList.add('hidden');
+            document.getElementById("dashboard-view").classList.remove('hidden');
+            document.getElementById("navbar").classList.add('hidden');
+            window.scrollTo(0,0);
+            pushHistoryState("dashboard");
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            updateAuthUI();
+        }
+
+        function updateAuthUI() {
+            const title = document.getElementById("authTitle");
+            const btn = document.getElementById("authBtn");
+            const toggle = document.getElementById("toggleText");
+            const regFields = document.getElementById("regFields");
+
+            if(isLoginMode) {
+                title.innerText = "Client Login";
+                btn.innerText = "Secure Login";
+                toggle.innerText = "Don't have an account? Register";
+                regFields.classList.add("hidden");
+            } else {
+                title.innerText = "New Partnership";
+                btn.innerText = "Register Company";
+                toggle.innerText = "Already registered? Login";
+                regFields.classList.remove("hidden");
+            }
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById("email").value;
+            const pass = document.getElementById("pass").value;
+            const btn = document.getElementById("authBtn");
+            
+            if(!email || !pass) { alert("Please enter credentials."); return; }
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            try {
+                if(!isLoginMode) {
+                    const name = document.getElementById("regName").value;
+                    const phone = document.getElementById("regPhone").value;
+                    const occ = document.getElementById("regOcc").value;
+                    const sal = document.getElementById("regSal").value;
+                    if(!name || !phone) throw new Error("Name and Phone are required.");
+                    const res = await auth.createUserWithEmailAndPassword(email, pass);
+                    // Set default role as user (NOT admin)
+                    await db.collection('users').doc(res.user.uid).set({
+                        name, phone, occupation: occ, salary_range: sal,
+                        email, resume: 5, linkedin: 5, focus: "Initializing account...", role: "user"
+                    });
+                } else {
+                    await auth.signInWithEmailAndPassword(email, pass);
+                }
+                closeModal(true); 
+            } catch(err) { 
+                alert(err.message); 
+            } finally {
+                btn.innerText = isLoginMode ? "Secure Login" : "Register Company";
+                btn.disabled = false;
+            }
+        }
+
+        // --- AUTH STATE LISTENER (WITH NEW ADMIN CHECK) ---
+        auth.onAuthStateChanged(user => {
+            document.getElementById("loader").style.opacity = "0";
+            setTimeout(() => { document.getElementById("loader").style.display = "none"; }, 500);
+
+            if(user) {
+                currentUID = user.uid;
+                switchToDashboard();
+                
+                db.collection('users').doc(user.uid).onSnapshot(doc => {
+                    if(doc.exists) {
+                        const data = doc.data();
+                        
+                        // NEW SECURE ADMIN CHECK (Depends on database field instead of hardcoded email)
+                        if(data.role === "admin") {
+                            document.getElementById("admin-panel").classList.remove('hidden');
+                            document.getElementById("admin-indicator").classList.remove('hidden');
+                        } else {
+                            document.getElementById("admin-panel").classList.add('hidden');
+                            document.getElementById("admin-indicator").classList.add('hidden');
+                        }
+
+                        document.getElementById("user-name").innerText = data.name || "Partner";
+                        document.getElementById("dash-email").innerText = user.email;
+                        document.getElementById("dash-phone").innerText = data.phone || "-";
+                        document.getElementById("dash-occ").innerText = data.occupation || "-";
+                        document.getElementById("dash-sal").innerText = data.salary_range || "-";
+                        const resP = data.resume || 0;
+                        const liP = data.linkedin || 0;
+                        document.getElementById("res-prog").style.width = resP + "%";
+                        document.getElementById("res-val").innerText = resP + "%";
+                        document.getElementById("li-prog").style.width = liP + "%";
+                        document.getElementById("li-val").innerText = liP + "%";
+                        document.getElementById("focus-text").innerText = data.focus || "Updating status...";
+                    }
+                });
+            } else {
+                currentUID = null;
+                document.getElementById("dashboard-view").classList.add('hidden');
+                document.getElementById("public-view").classList.remove('hidden');
+                document.getElementById("navbar").classList.remove('hidden');
+            }
+        });
+
+        // --- ADMIN FUNCTIONS ---
+        async function findUser() {
+            const emailInput = document.getElementById("target-email").value;
+            if(!emailInput) { alert("Enter an email"); return; }
+            try {
+                const snapshot = await db.collection('users').where('email', '==', emailInput).get();
+                if(snapshot.empty) {
+                    alert("User not found in database.");
+                    closeAdminEditor();
+                    return;
+                }
+                const doc = snapshot.docs[0];
+                targetUserId = doc.id;
+                const data = doc.data();
+                document.getElementById("editing-email").innerText = data.email;
+                document.getElementById("edit-res").value = data.resume || 0;
+                document.getElementById("edit-li").value = data.linkedin || 0;
+                document.getElementById("edit-focus").value = data.focus || "";
+                document.getElementById("admin-editor").classList.remove("hidden");
+            } catch (error) {
+                console.error("Error finding user:", error);
+                alert("Error: check console or permissions.");
+            }
+        }
+
+        async function updateTargetUser() {
+            if(!targetUserId) return;
+            const btn = document.querySelector(".btn-admin");
+            const oldText = btn.innerText;
+            btn.innerText = "Updating...";
+            btn.disabled = true;
+            try {
+                await db.collection('users').doc(targetUserId).update({
+                    resume: Number(document.getElementById("edit-res").value),
+                    linkedin: Number(document.getElementById("edit-li").value),
+                    focus: document.getElementById("edit-focus").value
+                });
+                alert("Client data updated successfully!");
+                document.getElementById("target-email").value = "";
+                closeAdminEditor();
+            } catch (error) {
+                console.error("Update failed:", error);
+                alert("Update failed. Do you have permission?");
+            } finally {
+                btn.innerText = oldText;
+                btn.disabled = false;
+            }
+        }
+
+        function closeAdminEditor() {
+            document.getElementById("admin-editor").classList.add("hidden");
+            targetUserId = null;
+        }
+
+        function logout() { 
+            auth.signOut();
+            window.location.hash = "";
+            window.location.reload();
+        }
+
+        // --- ANIMATIONS & INTERACTIONS ---
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById("navbar");
+            if (window.scrollY > 50) nav.classList.add("scrolled");
+            else nav.classList.remove("scrolled");
+            
+            document.querySelectorAll('.reveal').forEach(el => {
+                const top = el.getBoundingClientRect().top;
+                if (top < window.innerHeight - 50) {
+                    el.style.opacity = "1";
+                    el.style.transform = "translateY(0)";
+                }
+            });
+
+            // Scroll Progress
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            document.getElementById("scroll-progress").style.width = scrollPercent + "%";
+        });
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            el.style.opacity = "0";
+            el.style.transform = "translateY(30px)";
+            el.style.transition = "all 0.8s ease-out";
+        });
+
+        // FAQ Accordion Logic
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                const answer = button.nextElementSibling;
+                button.classList.toggle('active');
+                if (button.classList.contains('active')) {
+                    answer.style.maxHeight = answer.scrollHeight + "px";
+                } else {
+                    answer.style.maxHeight = 0;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
